@@ -1,0 +1,33 @@
+# ======================
+# Python Cache
+# ======================
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+
+
+.env
+.venv
+env/
+venv/
+dynamicenv/
+Dynamic/
+
+
+build/
+dist/
+
+
+.ipynb_checkpoints/
+
+
+.DS_Store
+Thumbs.db
+
+
+.vscode/
+.idea/
+
+
+*.log

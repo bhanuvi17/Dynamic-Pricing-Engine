@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Pricing Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #f5f4f0;
+      --surface: #ffffff;
+      --border:  #e0ddd6;
+      --text:    #1a1a1a;
+      --muted:   #888580;
+      --subtle:  #b0ada6;
+      --red:     #c0392b;
+      --green:   #1a6b3c;
+      --amber:   #b07d2a;
+    }
+    html { font-size: 14px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-brand {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .nav-brand span { color: var(--muted); font-weight: 400; }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .live-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: var(--green);
+      text-transform: uppercase;
+      border: 1px solid currentColor;
+      padding: 3px 10px;
+      border-radius: 2px;
+    }
+    .nav-link { font-size: 12px; color: var(--muted); text-decoration: none; }
+    .nav-link:hover { color: var(--text); }
+
+    /* LAYOUT */
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 48px 32px;
+      display: grid;
+      grid-template-columns: 480px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 16px;
+    }
+
+    /* PANEL */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .panel-header {
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-title { font-size: 13px; font-weight: 600; }
+    .panel-body { padding: 24px 28px; }
+
+    /* SAMPLE BUTTON */
+    .btn-sample {
+      height: 32px;
+      padding: 0 14px;
+      background: #f0faf4;
+      border: 1px solid #b8dfc8;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      color: #1a6b3c;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-sample:hover {
+      background: #d8f2e4;
+      border-color: #1a6b3c;
+      color: #1a6b3c;
+    }
+
+    /* Sample counter badge */
+    .sample-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--subtle);
+      margin-bottom: 16px;
+      text-align: right;
+      letter-spacing: 0.5px;
+    }
+
+    /* FORM */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.span2 { grid-column: 1 / -1; }
+    .field label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .field input,
+    .field select {
+      height: 40px;
+      padding: 0 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      width: 100%;
+      appearance: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--text);
+      background: var(--surface);
+    }
+    /* Flash animation when sample fills form */
+    .field input.flash, .field select.flash {
+      border-color: var(--amber);
+      background: #fffbf2;
+    }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888580' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .field select.flash {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888580' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 22px 0; }
+
+    .btn-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+    .btn-submit {
+      width: 100%;
+      height: 44px;
+      background: var(--text);
+      color: #ffffff;
+      border: none;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-submit:hover { opacity: 0.82; }
+    .btn-submit:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    .error-bar {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #fdf2f2;
+      border: 1px solid #e8c4c4;
+      border-radius: 3px;
+      font-size: 12px;
+      color: var(--red);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .error-bar.show { display: block; }
+
+    /* RIGHT COL */
+    .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+    .placeholder {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 64px 28px;
+      text-align: center;
+    }
+    .placeholder-title { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+    .placeholder-sub { font-size: 12px; color: var(--subtle); }
+
+    /* RESULT */
+    .result-panel {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .result-panel.show { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .price-hero {
+      padding: 36px 32px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .price-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 10px;
+    }
+    .price-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 52px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+    .price-currency {
+      font-size: 22px;
+      font-weight: 400;
+      vertical-align: top;
+      margin-top: 7px;
+      display: inline-block;
+      color: var(--muted);
+    }
+    .change-tag {
+      display: inline-block;
+      margin-top: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+    .change-tag.up   { background: #fdf2f2; color: var(--red);   border: 1px solid #e8c4c4; }
+    .change-tag.down { background: #f0faf4; color: var(--green); border: 1px solid #b8dfc8; }
+    .change-tag.flat { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-cell { padding: 18px 20px; border-right: 1px solid var(--border); }
+    .stat-cell:last-child { border-right: none; }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .stat-value.red   { color: var(--red); }
+    .stat-value.green { color: var(--green); }
+    .stat-value.amber { color: var(--amber); }
+
+    .mult-section {
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .mult-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .mult-row-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+    .mult-row-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+    .bar-track { height: 3px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .bar-fill {
+      height: 100%;
+      background: var(--text);
+      border-radius: 99px;
+      transition: width 0.7s cubic-bezier(0.25,1,0.5,1);
+    }
+
+    .breakdown { padding: 0 28px 4px; }
+    .breakdown-title {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--subtle);
+      padding: 18px 0 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .breakdown-row:last-child { border-bottom: none; padding-bottom: 20px; }
+    .breakdown-row .lbl { color: var(--muted); }
+    .breakdown-row .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+    .breakdown-row.total {
+      border-top: 1px solid var(--text);
+      padding-top: 14px;
+      margin-top: 4px;
+      border-bottom: none;
+    }
+    .breakdown-row.total .lbl { font-weight: 600; color: var(--text); }
+    .breakdown-row.total .val { font-size: 15px; font-weight: 600; }
+
+    footer {
+      text-align: center;
+      padding: 40px 32px;
+      font-size: 11px;
+      color: var(--subtle);
+      letter-spacing: 0.5px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 960px) {
+      .container { grid-template-columns: 1fr; }
+      nav { padding: 0 24px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .stat-cell:nth-child(2) { border-right: none; }
+      .stat-cell:nth-child(3),
+      .stat-cell:nth-child(4) { border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    Dynamic Pricing Engine <span>/ XGBoost + Surge Algorithm</span>
+  </div>
+  <div class="nav-right">
+    <div class="live-tag">Live</div>
+    <a href="/docs" class="nav-link">API Docs</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- LEFT: FORM -->
+  <div>
+    <p class="section-label">Ride Parameters</p>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Configure Ride</div>
+        <button class="btn-sample" onclick="loadSample()">Random Sample</button>
+      </div>
+      <div class="panel-body">
+        <div class="sample-counter" id="sampleCounter" style="display:none;">
+          Sample <span id="sampleNum">0</span> of 50 &nbsp;—&nbsp; all fields editable
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Riders</label>
+            <input type="number" id="riders" value="60" min="1" max="100">
+          </div>
+          <div class="field">
+            <label>Drivers Available</label>
+            <input type="number" id="drivers" value="27" min="1" max="100">
+          </div>
+          <div class="field">
+            <label>Vehicle Type</label>
+            <select id="vehicle">
+              <option value="Economy">Economy</option>
+              <option value="Premium" selected>Premium</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Location</label>
+            <select id="location">
+              <option value="Urban" selected>Urban</option>
+              <option value="Suburban">Suburban</option>
+              <option value="Rural">Rural</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Time of Booking</label>
+            <select id="time">
+              <option value="Morning">Morning</option>
+              <option value="Afternoon">Afternoon</option>
+              <option value="Evening" selected>Evening</option>
+              <option value="Night">Night</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Loyalty Status</label>
+            <select id="loyalty">
+              <option value="Gold">Gold</option>
+              <option value="Silver" selected>Silver</option>
+              <option value="Regular">Regular</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Past Rides</label>
+            <input type="number" id="past_rides" value="50" min="0">
+          </div>
+          <div class="field">
+            <label>Duration (minutes)</label>
+            <input type="number" id="duration" value="100" min="1">
+          </div>
+          <div class="field span2">
+            <label>Historical Base Price (Rs.)</label>
+            <input type="number" id="base_price" value="370" step="0.01" min="1">
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn-submit" id="submitBtn" onclick="predict()">
+          Calculate Surge Price
+        </button>
+        <div class="error-bar" id="errorBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="right-col">
+    <p class="section-label">Prediction Output</p>
+
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-title">No prediction yet</div>
+      <div class="placeholder-sub">Use Random Sample or enter values manually, then calculate.</div>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="price-hero">
+        <div class="price-eyebrow">Final ML Surge Price</div>
+        <div class="price-display">
+          <span class="price-currency">Rs. </span><span id="displayPrice">0.00</span>
+        </div>
+        <div class="change-tag" id="changeTag"></div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-cell">
+          <div class="stat-label">Base Price</div>
+          <div class="stat-value" id="statBase">--</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">ML Base</div>
+          <div class="stat-value green" id="statMlBase">--</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Multiplier</div>
+          <div class="stat-value amber" id="statMult">--</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Change</div>
+          <div class="stat-value" id="statChange">--</div>
+        </div>
+      </div>
+
+      <div class="mult-section">
+        <div class="mult-row">
+          <span class="mult-row-label">Surge Intensity</span>
+          <span class="mult-row-value" id="multLabel">--</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="barFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-title">Price Breakdown</div>
+        <div class="breakdown-row">
+          <span class="lbl">Historical Base</span>
+          <span class="val" id="brBase">--</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="lbl">ML Predicted Base</span>
+          <span class="val" id="brMlBase">--</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="lbl">Surge Multiplier</span>
+          <span class="val" id="brMult">--</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="lbl">Surge Adjusted (formula)</span>
+          <span class="val" id="brSurge">--</span>
+        </div>
+        <div class="breakdown-row total">
+          <span class="lbl">Final ML Surge Price</span>
+          <span class="val" id="brFinal">--</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Dynamic Pricing Engine &nbsp;&middot;&nbsp; XGBoost + Surge Algorithm &nbsp;&middot;&nbsp;
+  <a href="/docs">API Documentation</a>
+</footer>
+
+<script>
+  // ── 50 balanced samples: ~25 discount cases + ~25 surge cases ──────────────
+  // Discount cases: high drivers vs riders (ratio below median ~2.36)
+  // Surge cases:    low drivers vs riders (ratio above median ~2.36)
+  const SAMPLES = [
+    // --- DISCOUNT / LOW SURGE cases (many drivers relative to riders) ---
+    {"riders":76,"drivers":35,"location":"Suburban","loyalty":"Regular","past_rides":8,"time":"Afternoon","vehicle":"Premium","duration":138,"base_price":406.59},
+    {"riders":100,"drivers":54,"location":"Suburban","loyalty":"Regular","past_rides":91,"time":"Night","vehicle":"Premium","duration":61,"base_price":203.11},
+    {"riders":91,"drivers":65,"location":"Urban","loyalty":"Regular","past_rides":40,"time":"Evening","vehicle":"Economy","duration":141,"base_price":373.5},
+    {"riders":28,"drivers":14,"location":"Rural","loyalty":"Regular","past_rides":24,"time":"Afternoon","vehicle":"Economy","duration":147,"base_price":533.08},
+    {"riders":22,"drivers":12,"location":"Urban","loyalty":"Silver","past_rides":49,"time":"Night","vehicle":"Premium","duration":35,"base_price":179.84},
+    {"riders":21,"drivers":11,"location":"Rural","loyalty":"Silver","past_rides":23,"time":"Afternoon","vehicle":"Economy","duration":12,"base_price":40.44},
+    {"riders":76,"drivers":53,"location":"Urban","loyalty":"Regular","past_rides":77,"time":"Afternoon","vehicle":"Premium","duration":179,"base_price":555.89},
+    {"riders":84,"drivers":62,"location":"Urban","loyalty":"Silver","past_rides":52,"time":"Afternoon","vehicle":"Economy","duration":29,"base_price":126.23},
+    {"riders":88,"drivers":71,"location":"Rural","loyalty":"Regular","past_rides":42,"time":"Afternoon","vehicle":"Premium","duration":109,"base_price":330.78},
+    {"riders":95,"drivers":73,"location":"Urban","loyalty":"Regular","past_rides":20,"time":"Evening","vehicle":"Premium","duration":138,"base_price":666.82},
+    {"riders":99,"drivers":54,"location":"Rural","loyalty":"Silver","past_rides":96,"time":"Afternoon","vehicle":"Premium","duration":61,"base_price":241.64},
+    {"riders":57,"drivers":46,"location":"Rural","loyalty":"Regular","past_rides":42,"time":"Morning","vehicle":"Economy","duration":56,"base_price":210.63},
+    {"riders":47,"drivers":36,"location":"Rural","loyalty":"Silver","past_rides":100,"time":"Morning","vehicle":"Economy","duration":103,"base_price":414.78},
+    {"riders":69,"drivers":36,"location":"Suburban","loyalty":"Gold","past_rides":55,"time":"Morning","vehicle":"Economy","duration":109,"base_price":436.01},
+    {"riders":38,"drivers":28,"location":"Urban","loyalty":"Gold","past_rides":8,"time":"Morning","vehicle":"Economy","duration":29,"base_price":95.02},
+    {"riders":40,"drivers":30,"location":"Urban","loyalty":"Regular","past_rides":67,"time":"Evening","vehicle":"Premium","duration":143,"base_price":529.7},
+    {"riders":59,"drivers":39,"location":"Suburban","loyalty":"Gold","past_rides":49,"time":"Morning","vehicle":"Premium","duration":98,"base_price":295.79},
+    {"riders":72,"drivers":62,"location":"Suburban","loyalty":"Regular","past_rides":48,"time":"Evening","vehicle":"Economy","duration":126,"base_price":553.74},
+    {"riders":42,"drivers":31,"location":"Suburban","loyalty":"Gold","past_rides":62,"time":"Night","vehicle":"Premium","duration":13,"base_price":102.04},
+    {"riders":75,"drivers":55,"location":"Rural","loyalty":"Gold","past_rides":54,"time":"Night","vehicle":"Premium","duration":145,"base_price":584.49},
+    {"riders":90,"drivers":45,"location":"Urban","loyalty":"Silver","past_rides":13,"time":"Night","vehicle":"Premium","duration":90,"base_price":284.26},
+    {"riders":61,"drivers":38,"location":"Urban","loyalty":"Silver","past_rides":95,"time":"Night","vehicle":"Economy","duration":164,"base_price":415.98},
+    {"riders":31,"drivers":17,"location":"Rural","loyalty":"Silver","past_rides":71,"time":"Evening","vehicle":"Premium","duration":55,"base_price":237.77},
+    {"riders":32,"drivers":22,"location":"Rural","loyalty":"Silver","past_rides":49,"time":"Night","vehicle":"Economy","duration":60,"base_price":221.43},
+    {"riders":44,"drivers":28,"location":"Rural","loyalty":"Regular","past_rides":31,"time":"Night","vehicle":"Premium","duration":132,"base_price":402.86},
+
+    // --- SURGE cases (few drivers relative to many riders) ---
+    {"riders":27,"drivers":5,"location":"Rural","loyalty":"Gold","past_rides":2,"time":"Evening","vehicle":"Economy","duration":22,"base_price":60.98},
+    {"riders":42,"drivers":7,"location":"Rural","loyalty":"Gold","past_rides":90,"time":"Evening","vehicle":"Economy","duration":32,"base_price":123.76},
+    {"riders":89,"drivers":28,"location":"Rural","loyalty":"Regular","past_rides":67,"time":"Afternoon","vehicle":"Premium","duration":134,"base_price":470.2},
+    {"riders":80,"drivers":22,"location":"Rural","loyalty":"Gold","past_rides":17,"time":"Morning","vehicle":"Economy","duration":141,"base_price":423.75},
+    {"riders":83,"drivers":10,"location":"Urban","loyalty":"Gold","past_rides":28,"time":"Afternoon","vehicle":"Economy","duration":23,"base_price":70.11},
+    {"riders":88,"drivers":28,"location":"Urban","loyalty":"Gold","past_rides":22,"time":"Night","vehicle":"Premium","duration":154,"base_price":682.02},
+    {"riders":33,"drivers":7,"location":"Suburban","loyalty":"Gold","past_rides":49,"time":"Evening","vehicle":"Premium","duration":22,"base_price":129.81},
+    {"riders":75,"drivers":7,"location":"Suburban","loyalty":"Gold","past_rides":100,"time":"Morning","vehicle":"Economy","duration":134,"base_price":453.38},
+    {"riders":74,"drivers":16,"location":"Rural","loyalty":"Regular","past_rides":6,"time":"Morning","vehicle":"Economy","duration":139,"base_price":390.67},
+    {"riders":60,"drivers":6,"location":"Rural","loyalty":"Silver","past_rides":65,"time":"Morning","vehicle":"Economy","duration":168,"base_price":629.2},
+    {"riders":60,"drivers":24,"location":"Rural","loyalty":"Gold","past_rides":5,"time":"Afternoon","vehicle":"Premium","duration":154,"base_price":556.66},
+    {"riders":92,"drivers":34,"location":"Suburban","loyalty":"Regular","past_rides":98,"time":"Night","vehicle":"Economy","duration":140,"base_price":396.64},
+    {"riders":54,"drivers":16,"location":"Suburban","loyalty":"Regular","past_rides":8,"time":"Afternoon","vehicle":"Premium","duration":67,"base_price":266.07},
+    {"riders":79,"drivers":24,"location":"Urban","loyalty":"Silver","past_rides":0,"time":"Evening","vehicle":"Economy","duration":82,"base_price":284.86},
+    {"riders":91,"drivers":13,"location":"Rural","loyalty":"Silver","past_rides":32,"time":"Morning","vehicle":"Premium","duration":160,"base_price":647.35},
+    {"riders":69,"drivers":12,"location":"Suburban","loyalty":"Regular","past_rides":42,"time":"Afternoon","vehicle":"Premium","duration":158,"base_price":608.13},
+    {"riders":38,"drivers":9,"location":"Suburban","loyalty":"Gold","past_rides":57,"time":"Morning","vehicle":"Premium","duration":16,"base_price":104.06},
+    {"riders":52,"drivers":9,"location":"Suburban","loyalty":"Regular","past_rides":24,"time":"Morning","vehicle":"Economy","duration":102,"base_price":366.73},
+    {"riders":56,"drivers":14,"location":"Suburban","loyalty":"Silver","past_rides":30,"time":"Night","vehicle":"Economy","duration":48,"base_price":202.95},
+    {"riders":88,"drivers":16,"location":"Suburban","loyalty":"Gold","past_rides":26,"time":"Morning","vehicle":"Economy","duration":32,"base_price":127.33},
+    {"riders":82,"drivers":10,"location":"Urban","loyalty":"Silver","past_rides":97,"time":"Night","vehicle":"Economy","duration":177,"base_price":481.77},
+    {"riders":97,"drivers":9,"location":"Rural","loyalty":"Gold","past_rides":58,"time":"Evening","vehicle":"Premium","duration":142,"base_price":491.58},
+    {"riders":57,"drivers":20,"location":"Rural","loyalty":"Regular","past_rides":92,"time":"Morning","vehicle":"Economy","duration":53,"base_price":172.63},
+    {"riders":45,"drivers":17,"location":"Rural","loyalty":"Gold","past_rides":10,"time":"Night","vehicle":"Premium","duration":148,"base_price":430.07},
+    {"riders":34,"drivers":7,"location":"Urban","loyalty":"Silver","past_rides":54,"time":"Night","vehicle":"Premium","duration":149,"base_price":516.51}
+  ];
+
+  let sampleIndex = -1;
+
+  function loadSample() {
+    sampleIndex = (sampleIndex + 1) % SAMPLES.length;
+    const s = SAMPLES[sampleIndex];
+
+    setVal('riders',     s.riders);
+    setVal('drivers',    s.drivers);
+    setVal('past_rides', s.past_rides);
+    setVal('duration',   s.duration);
+    setVal('base_price', s.base_price);
+    setSelect('vehicle',   s.vehicle);
+    setSelect('location',  s.location);
+    setSelect('time',      s.time);
+    setSelect('loyalty',   s.loyalty);
+
+    // Show counter
+    const counter = document.getElementById('sampleCounter');
+    counter.style.display = 'block';
+    document.getElementById('sampleNum').textContent = sampleIndex + 1;
+  }
+
+  function setVal(id, val) {
+    const el = document.getElementById(id);
+    el.value = val;
+    flashEl(el);
+  }
+
+  function setSelect(id, val) {
+    const el = document.getElementById(id);
+    el.value = val;
+    flashEl(el);
+  }
+
+  function flashEl(el) {
+    el.classList.remove('flash');
+    void el.offsetWidth; // reflow
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 600);
+  }
+
+  // ── PREDICT ────────────────────────────────────────────────────────────────
+  const API = window.location.origin;
+
+  async function predict() {
+    const btn = document.getElementById('submitBtn');
+    const errBar = document.getElementById('errorBar');
+
+    const payload = {
+      Number_of_Riders:        parseInt(document.getElementById('riders').value),
+      Number_of_Drivers:       parseInt(document.getElementById('drivers').value),
+      Location_Category:       document.getElementById('location').value,
+      Customer_Loyalty_Status: document.getElementById('loyalty').value,
+      Number_of_Past_Rides:    parseInt(document.getElementById('past_rides').value),
+      Time_of_Booking:         document.getElementById('time').value,
+      Vehicle_Type:            document.getElementById('vehicle').value,
+      Expected_Ride_Duration:  parseInt(document.getElementById('duration').value),
+      Historical_Cost_of_Ride: parseFloat(document.getElementById('base_price').value),
+    };
+
+    for (const [k, v] of Object.entries(payload)) {
+      if (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) {
+        errBar.textContent = 'Invalid value for ' + k;
+        errBar.classList.add('show');
+        return;
+      }
+    }
+
+    errBar.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Calculating...';
+
+    try {
+      const res = await fetch(API + '/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.detail || 'Server error');
+      }
+      renderResult(await res.json());
+    } catch (e) {
+      errBar.textContent = e.message;
+      errBar.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Calculate Surge Price';
+    }
+  }
+
+  function renderResult(d) {
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('resultPanel').classList.add('show');
+
+    document.getElementById('displayPrice').textContent = fmt(d.ml_surge_price);
+
+    const tag = document.getElementById('changeTag');
+    const pct = d.percent_change;
+    if (pct > 0.5) {
+      tag.textContent = '+' + pct.toFixed(1) + '% above historical base';
+      tag.className = 'change-tag up';
+    } else if (pct < -0.5) {
+      tag.textContent = pct.toFixed(1) + '% below historical base';
+      tag.className = 'change-tag down';
+    } else {
+      tag.textContent = 'At historical base price';
+      tag.className = 'change-tag flat';
+    }
+
+    document.getElementById('statBase').textContent   = 'Rs. ' + fmt(d.base_price);
+    document.getElementById('statMlBase').textContent = 'Rs. ' + fmt(d.ml_base_price);
+    document.getElementById('statMult').textContent   = d.surge_multiplier.toFixed(3) + 'x';
+
+    const chEl = document.getElementById('statChange');
+    chEl.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+    chEl.className = 'stat-value ' + (pct > 1 ? 'red' : pct < -1 ? 'green' : '');
+
+    // Bar: 0.8 = 0%, 1.0 = 33%, 1.4 = 100%
+    const barPct = Math.min(100, Math.max(0, ((d.surge_multiplier - 0.8) / 0.6) * 100));
+    document.getElementById('barFill').style.width = barPct + '%';
+    document.getElementById('multLabel').textContent = d.surge_multiplier.toFixed(3) + 'x multiplier';
+
+    document.getElementById('brBase').textContent   = 'Rs. ' + fmt(d.base_price);
+    document.getElementById('brMlBase').textContent = 'Rs. ' + fmt(d.ml_base_price);
+    document.getElementById('brMult').textContent   = d.surge_multiplier.toFixed(3) + 'x';
+    document.getElementById('brSurge').textContent  = 'Rs. ' + fmt(d.surge_adjusted_price);
+    document.getElementById('brFinal').textContent  = 'Rs. ' + fmt(d.ml_surge_price);
+  }
+
+  function fmt(n) {
+    return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+</script>
+</body>
+</html>
