@@ -171,7 +171,7 @@ Interactive API docs available at `http://127.0.0.1:8000/docs`
 
 ## Requirements
 
-See `requirements.txt`. Key dependencies:
+See `requirements.txt` Key dependencies:
 
 ```
 xgboost
